@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Jardín Eterno</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Josefin+Sans:wght@100;200;300&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#080502; font-family:'Cormorant Garamond',serif; }
+
+/* ─── CURSOR ─── */
+#cur,#cur2 { position:fixed; pointer-events:none; z-index:9999; border-radius:50%; transform:translate(-50%,-50%); }
+#cur  { width:10px; height:10px; background:radial-gradient(circle,#fff8c0,#f5c518); box-shadow:0 0 14px 4px rgba(245,197,24,0.7); transition:transform 0.06s; }
+#cur2 { width:38px; height:38px; border:1px solid rgba(245,197,24,0.25); transition:left 0.16s ease,top 0.16s ease; }
+
+/* ─── LOADING ─── */
+#loading { position:fixed; inset:0; z-index:600; background:#080502; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 1.2s ease; }
+.load-flower { font-size:3rem; animation:spin 3s linear infinite; margin-bottom:1.5rem; filter:drop-shadow(0 0 20px rgba(245,197,24,0.6)); }
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.load-bar-wrap { width:180px; height:1px; background:rgba(245,197,24,0.1); overflow:hidden; }
+.load-bar { height:100%; background:linear-gradient(90deg,transparent,#f5c518); width:0%; transition:width 0.25s ease; }
+.load-txt { font-family:'Josefin Sans',sans-serif; font-size:0.58rem; font-weight:100; letter-spacing:0.45em; color:rgba(245,197,24,0.3); text-transform:uppercase; margin-top:1rem; }
+
+/* ─── CANVAS WRAP ─── */
+#wrap { position:fixed; inset:0; opacity:0; transition:opacity 2.5s ease; }
+#wrap.show { opacity:1; }
+
+/* ─── PÉTALOS CAYENDO ─── */
+.fp { position:fixed; pointer-events:none; z-index:30; animation:fallPetal linear forwards; }
+@keyframes fallPetal {
+  0%   { transform:translateY(-30px) rotate(0deg) scale(0.9); opacity:0.95; }
+  15%  { opacity:1; }
+  100% { transform:translateY(108vh) rotate(600deg) scale(1.05); opacity:0; }
+}
+
+/* ─── UI ─── */
+#ui { position:fixed; inset:0; pointer-events:none; z-index:40; }
+
+#love-count { position:absolute; top:24px; left:28px; font-family:'Cormorant Garamond',serif; font-style:italic;
+  font-size:0.9rem; color:rgba(255,210,80,0.32); transition:all 0.4s; }
+#love-count.bump { color:rgba(255,220,80,0.75); transform:scale(1.15); }
+
+#msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.9);
+  text-align:center; max-width:540px; width:90%; opacity:0; transition:all 0.85s cubic-bezier(0.16,1,0.3,1); pointer-events:none; }
+#msg.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+.msg-text { font-size:clamp(1.4rem,3.8vw,2.5rem); font-weight:300; font-style:italic; color:#fffae0;
+  text-shadow:0 0 28px rgba(255,210,60,0.5),0 2px 10px rgba(0,0,0,0.9); line-height:1.55; }
+.msg-sub { margin-top:0.7rem; font-family:'Josefin Sans',sans-serif; font-size:0.58rem; font-weight:100;
+  letter-spacing:0.42em; text-transform:uppercase; color:rgba(255,220,100,0.35); }
+
+/* ─── LETRA SINCRONIZADA ─── */
+#lyrics-box { position:absolute; bottom:110px; left:50%; transform:translateX(-50%);
+  text-align:center; max-width:600px; width:88%; opacity:0; transition:opacity 0.6s ease; pointer-events:none; }
+#lyrics-box.show { opacity:1; }
+.lyric-line { font-size:clamp(1rem,2.6vw,1.5rem); font-weight:300; font-style:italic; color:#ffe9a8;
+  text-shadow:0 0 20px rgba(255,200,60,0.55),0 2px 8px rgba(0,0,0,0.85); }
+
+/* ─── PANEL ─── */
+#panel { position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:space-between;
+  align-items:flex-end; padding:0 28px 26px; pointer-events:all; }
+
+.panel-left { font-family:'Josefin Sans',sans-serif; font-size:0.56rem; font-weight:100;
+  letter-spacing:0.32em; color:rgba(255,210,80,0.3); text-transform:uppercase; max-width:220px; line-height:2.2; }
+
+.panel-right { display:flex; flex-direction:column; align-items:flex-end; gap:7px; }
+
+/* ─── BOTONES ─── */
+.icon-btn {
+  display:flex; align-items:center; gap:9px;
+  padding:0 14px 0 11px; height:34px;
+  border:1px solid rgba(245,197,24,0.18);
+  border-radius:17px;
+  background:rgba(6,4,0,0.78);
+  backdrop-filter:blur(14px);
+  cursor:none;
+  transition:border-color 0.3s,background 0.3s,box-shadow 0.3s;
+  pointer-events:all;
+  min-width:138px;
+}
+.btn-icon { font-size:0.9rem; width:18px; text-align:center; flex-shrink:0; }
+.btn-label { font-family:'Josefin Sans',sans-serif; font-size:0.56rem; font-weight:200;
+  letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,210,70,0.45); transition:color 0.3s; flex:1; }
+.btn-dot { width:5px; height:5px; border-radius:50%; background:rgba(255,200,50,0.15);
+  transition:background 0.3s,box-shadow 0.3s; flex-shrink:0; }
+
+.icon-btn:hover { border-color:rgba(245,197,24,0.45); background:rgba(18,11,0,0.88); }
+.icon-btn:hover .btn-label { color:rgba(255,225,90,0.7); }
+
+.icon-btn.active { border-color:rgba(245,197,24,0.5); background:rgba(22,14,0,0.9); box-shadow:0 0 14px rgba(245,180,20,0.12); }
+.icon-btn.active .btn-label { color:rgba(255,228,90,0.9); }
+.icon-btn.active .btn-dot { background:#f5c518; box-shadow:0 0 7px rgba(245,197,24,0.7); }
+
+/* ─── SPARKLES ─── */
+.sparkle { position:fixed; pointer-events:none; z-index:300; border-radius:50%;
+  animation:sparkleAnim 0.75s ease-out forwards; }
+@keyframes sparkleAnim {
+  0%   { transform:translate(0,0) scale(1); opacity:1; }
+  100% { transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; }
+}
+
+@media(max-width:600px){
+  #panel { padding:0 14px 18px; }
+  .icon-btn { min-width:115px; }
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur2"></div>
+
+<!-- AUDIO: pon mvs.mp4 en la misma carpeta -->
+<audio id="bgAudio" src="mvs.mp4" loop preload="none"></audio>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="load-flower">🌻</div>
+  <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
+  <div class="load-txt" id="loadTxt">sembrando flores…</div>
+</div>
+
+<!-- ESCENA -->
+<div id="wrap">
+  <div id="ui">
+    <div id="love-count">♡ 0</div>
+    <div id="msg">
+      <p class="msg-text" id="msgText">Cada flor que florece<br>guarda un pedazo de magia</p>
+      <p class="msg-sub">✦ haz clic para sentir la magia ✦</p>
+    </div>
+    <div id="lyrics-box"><p class="lyric-line" id="lyricLine"></p></div>
+    <div id="panel">
+      <div class="panel-left">✦ arrastra · zoom · clic<br>para destellos mágicos</div>
+      <div class="panel-right">
+        <button class="icon-btn" id="nightBtn">
+          <span class="btn-icon" id="nightIcon">☽</span>
+          <span class="btn-label" id="nightLabel">Modo noche</span>
+          <span class="btn-dot"></span>
+        </button>
+        <button class="icon-btn" id="petalBtn">
+          <span class="btn-icon">❋</span>
+          <span class="btn-label">Pétalos</span>
+          <span class="btn-dot"></span>
+        </button>
+        <button class="icon-btn" id="brilloBtn">
+          <span class="btn-icon" id="brilloIcon">✦</span>
+          <span class="btn-label">Brillo</span>
+          <span class="btn-dot"></span>
+        </button>
+        <button class="icon-btn" id="musicBtn">
+          <span class="btn-icon" id="musicIcon">♪</span>
+          <span class="btn-label">Canción</span>
+          <span class="btn-dot"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+/* ══ CURSOR ══ */
+const cur = document.getElementById('cur');
+const cur2 = document.getElementById('cur2');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX+'px'; cur.style.top = e.clientY+'px';
+  cur2.style.left = e.clientX+'px'; cur2.style.top = e.clientY+'px';
+});
+document.addEventListener('mousedown', () => cur.style.transform='translate(-50%,-50%) scale(1.7)');
+document.addEventListener('mouseup',   () => cur.style.transform='translate(-50%,-50%) scale(1)');
+
+/* ══ LOADING ══ */
+const loadBar = document.getElementById('loadBar');
+const loadTxt = document.getElementById('loadTxt');
+const loadEl  = document.getElementById('loading');
+const loadPhrases = ['sembrando flores…','tejiendo pétalos…','pintando con luz…','llenando de amor…','casi listo…'];
+let prog = 0;
+const lt = setInterval(() => {
+  prog += Math.random()*20 + 6;
+  if (prog > 98) prog = 99;
+  loadBar.style.width = prog+'%';
+  loadTxt.textContent = loadPhrases[Math.min(Math.floor(prog/20), 4)];
+}, 200);
+setTimeout(() => {
+  clearInterval(lt); loadBar.style.width='100%';
+  setTimeout(() => {
+    loadEl.style.opacity='0';
+    setTimeout(() => {
+      loadEl.style.display='none';
+      document.getElementById('wrap').classList.add('show');
+      initScene();
+      for(let i=0;i<10;i++) setTimeout(spawnPetal, i*220);
+      setTimeout(() => {
+        document.getElementById('msg').classList.add('show');
+        setTimeout(() => document.getElementById('msg').classList.remove('show'), 5000);
+      }, 1400);
+    }, 1200);
+  }, 350);
+}, 2000);
+
+/* ══ AUDIO ══ */
+const audio = document.getElementById('bgAudio');
+let musicOn = false;
+
+/* Marcadores de tiempo (segundos) para la canción de 32s.
+   Reemplaza el texto "— línea N —" por tu propia letra en cada tramo. */
+const LYRIC_CUES = [
+  { time: 0,  text: 'Te agradezco que sanes mi alma' },
+  { time: 4,  text: 'Sobrevivo encontrando en tus ojos' },
+  { time: 8,  text: 'El resplandor de un verde ' },
+  { time: 13, text: 'talismán' },
+  { time: 18, text: 'Si, al final, esta vida es un sueño' },
+  { time: 23, text: 'Solo sé que a tu lado me quiero despertar' },
+  { time: 28, text: '— Amanecer una vez más' },
+];
+
+const lyricsBox = document.getElementById('lyrics-box');
+const lyricLine = document.getElementById('lyricLine');
+
+audio.addEventListener('timeupdate', () => {
+  if (!musicOn) return;
+  const ct = audio.currentTime;
+  let current = null;
+  for (let i = LYRIC_CUES.length - 1; i >= 0; i--) {
+    if (ct >= LYRIC_CUES[i].time) { current = LYRIC_CUES[i]; break; }
+  }
+  if (current) {
+    if (lyricLine.textContent !== current.text) lyricLine.textContent = current.text;
+    lyricsBox.classList.add('show');
+  } else {
+    lyricsBox.classList.remove('show');
+  }
+});
+
+audio.addEventListener('pause', () => lyricsBox.classList.remove('show'));
+audio.addEventListener('ended', () => lyricsBox.classList.remove('show'));
+
+function toggleMusic() {
+  if (!musicOn) {
+    audio.volume = 0;
+    audio.currentTime = 0;
+    audio.play().then(() => {
+      musicOn = true;
+      let v = 0;
+      const fi = setInterval(() => { v = Math.min(v+0.04, 0.85); audio.volume=v; if(v>=0.85) clearInterval(fi); }, 80);
+    }).catch(() => {});
+  } else {
+    musicOn = false;
+    let v = audio.volume;
+    const fo = setInterval(() => { v = Math.max(v-0.05, 0); audio.volume=v; if(v<=0){ audio.pause(); clearInterval(fo); } }, 60);
+  }
+  return musicOn;
+}
+
+/* ══ PÉTALOS CAYENDO ══ */
+const petalSymbols = ['🌻','✦','✧','❋','✿','❀','⋆'];
+let petalRain=false, petalIv;
+
+function spawnPetal() {
+  const p = document.createElement('div');
+  p.className = 'fp';
+  p.textContent = petalSymbols[Math.floor(Math.random()*petalSymbols.length)];
+  p.style.left = (Math.random()*110-5)+'vw';
+  p.style.fontSize = (0.8+Math.random()*1.1)+'rem';
+  p.style.animationDuration = (5+Math.random()*5)+'s';
+  p.style.color = `hsl(${40+Math.random()*20},100%,${55+Math.random()*20}%)`;
+  p.style.filter = `drop-shadow(0 0 ${4+Math.random()*6}px rgba(255,200,30,0.5))`;
+  document.body.appendChild(p);
+  setTimeout(() => p.remove(), 11000);
+}
+
+function togglePetals() {
+  petalRain = !petalRain;
+  if (petalRain) { for(let i=0;i<6;i++) setTimeout(spawnPetal,i*180); petalIv=setInterval(spawnPetal,450); }
+  else clearInterval(petalIv);
+  return petalRain;
+}
+
+setInterval(() => { if(Math.random()<0.25) spawnPetal(); }, 2500);
+
+/* ══ SPARKLES ══ */
+function burst(x, y, n=12) {
+  for(let i=0;i<n;i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const a=(i/n)*Math.PI*2+Math.random()*0.3, d=35+Math.random()*70;
+    s.style.cssText = `left:${x}px;top:${y}px;width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;
+      background:${Math.random()>0.4?'#f5c518':'#fff'};
+      animation-duration:${0.5+Math.random()*0.45}s;`;
+    s.style.setProperty('--dx', Math.cos(a)*d+'px');
+    s.style.setProperty('--dy', Math.sin(a)*d+'px');
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 900);
+  }
+}
+
+/* ══ THREE.JS ══ */
+let scene, camera, renderer, controls, composer, bloomPass;
+let flowers=[], t=0, nightMode=false;
+let auraLight, flashLight, fillLight, sunLight;
+let clickCount=0, brilloMode=false;
+
+const PHRASES = [
+  'Mereces todo lo que florece','La luz te eligió a ti',
+  'Cada pétalo lleva tu nombre','Este jardín te pertenece',
+  'Eres la razón del verano','Brillas más que cualquier sol',
+  'Aquí siempre será primavera','Naciste para ser amado así',
+  'Este momento es solo tuyo','Tu nombre sabe a girasoles'
+];
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x060401);
+  scene.fog = new THREE.FogExp2(0x060401, 0.02);
+
+  camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.1, 200);
+  camera.position.set(0, 5, 12);
+  camera.lookAt(0, 1, 0);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference:'high-performance' });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  document.getElementById('wrap').appendChild(renderer.domElement);
+
+  const rp = new RenderPass(scene, camera);
+  composer = new EffectComposer(renderer);
+  composer.addPass(rp);
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth/2, innerHeight/2), 0.45, 0.4, 0.4);
+  composer.addPass(bloomPass);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping=true; controls.dampingFactor=0.06;
+  controls.rotateSpeed=0.85; controls.zoomSpeed=0.6;
+  controls.enablePan=true; controls.panSpeed=0.7;
+  controls.target.set(0,1,0);
+  controls.minDistance=4; controls.maxDistance=26;
+  controls.maxPolarAngle=Math.PI/1.7;
+
+  buildLights();
+  buildFloor();
+  buildParticles();
+  buildBouquet();
+
+  window.addEventListener('resize', onResize);
+  window.addEventListener('click', onSceneClick);
+  animate();
+}
+
+/* ── LUCES ── */
+function buildLights() {
+  scene.add(new THREE.AmbientLight(0x1a0e04, 0.65));
+
+  sunLight = new THREE.DirectionalLight(0xfff0cc, 2.5);
+  sunLight.position.set(4, 7, 3);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.camera.left=-7; sunLight.shadow.camera.right=7;
+  sunLight.shadow.camera.top=7; sunLight.shadow.camera.bottom=-7;
+  sunLight.shadow.bias=-0.001;
+  scene.add(sunLight);
+
+  fillLight = new THREE.PointLight(0xff9933, 1.2, 13);
+  fillLight.position.set(-3, 3, 2);
+  scene.add(fillLight);
+
+  const fill2 = new THREE.PointLight(0xffcc55, 0.8, 11);
+  fill2.position.set(3, 2, -2);
+  scene.add(fill2);
+
+  const fill3 = new THREE.PointLight(0xffee88, 0.5, 8);
+  fill3.position.set(0, 0.5, 4);
+  scene.add(fill3);
+
+  auraLight = new THREE.PointLight(0xffaa33, 1.0, 8);
+  auraLight.position.set(0, 1.8, 1);
+  scene.add(auraLight);
+
+  flashLight = new THREE.PointLight(0xffffff, 0, 12);
+  flashLight.position.set(0, 2.5, 0);
+  scene.add(flashLight);
+}
+
+/* ── SUELO ── */
+function buildFloor() {
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(7, 48),
+    new THREE.MeshStandardMaterial({ color:0x120a03, roughness:0.95 })
+  );
+  floor.rotation.x=-Math.PI/2; floor.position.y=-1.2; floor.receiveShadow=true;
+  scene.add(floor);
+
+  [2.6, 3.4].forEach((r,i) => {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(r, 0.016, 4, 64),
+      new THREE.MeshStandardMaterial({ color:0xc08828, emissive:0x4a2a00, emissiveIntensity:0.3, roughness:0.4 })
+    );
+    ring.rotation.x=-Math.PI/2; ring.position.y=-1.18;
+    scene.add(ring);
+  });
+}
+
+/* ── PARTÍCULAS ── */
+let pSystems = [];
+
+function buildParticles() {
+  addPS(1200, 0xffcc55, 0.028, 5, 5.5);
+  addPS(600,  0xffeebb, 0.016, 4, 4.5);
+}
+
+function addPS(count, color, size, spread, yRange) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count*3);
+  for(let i=0;i<count;i++) {
+    const a=Math.random()*Math.PI*2, r=Math.random()*spread;
+    pos[i*3]   = Math.cos(a)*r + (Math.random()-.5)*1.5;
+    pos[i*3+1] = Math.random()*yRange - 0.5;
+    pos[i*3+2] = Math.sin(a)*r + (Math.random()-.5)*1.5;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color, size, transparent:true, opacity:0.55, blending:THREE.AdditiveBlending, depthWrite:false });
+  const pts = new THREE.Points(geo, mat);
+  pts.userData = { spread, yRange, origPos: pos.slice() };
+  scene.add(pts); pSystems.push(pts);
+}
+
+let pFrame=0;
+function updateParticles() {
+  pFrame++;
+  if(pFrame%2!==0) return;
+  pSystems.forEach((sys,si) => {
+    const pos = sys.geometry.attributes.position.array;
+    const orig = sys.userData.origPos;
+    const yr = sys.userData.yRange, sp = sys.userData.spread;
+    for(let i=0;i<pos.length;i+=3) {
+      pos[i]   += Math.sin(t*0.55+orig[i]*3)*0.0007;
+      pos[i+1] += 0.0018 + Math.random()*0.0012;
+      pos[i+2] += Math.cos(t*0.45+orig[i+2]*2.5)*0.0007;
+      if(pos[i+1]>yr) pos[i+1]=-0.5;
+      if(Math.abs(pos[i])>sp+1) pos[i]=orig[i];
+      if(Math.abs(pos[i+2])>sp+1) pos[i+2]=orig[i+2];
+    }
+    sys.geometry.attributes.position.needsUpdate=true;
+    sys.material.opacity = 0.4+Math.sin(t*(1.5+si*0.5))*0.15;
+  });
+}
+
+/* ── FLOR — sin hojas laterales ── */
+function mkFlower(x, z, scale=1, yOff=0, phase=0) {
+  const g = new THREE.Group();
+  g.userData = { phase, yOff, rx:(Math.random()-.5)*0.03, rz:(Math.random()-.5)*0.04, shake:0 };
+
+  // Tallo limpio — sin hojas laterales
+  const stemH = (1.0+Math.random()*0.2)*scale;
+  const curve = new THREE.CubicBezierCurve3(
+    new THREE.Vector3(0,-stemH,0),
+    new THREE.Vector3((Math.random()-.5)*0.06*scale,-stemH*0.55,0),
+    new THREE.Vector3((Math.random()-.5)*0.04*scale,-stemH*0.2,0),
+    new THREE.Vector3(0,0,0)
+  );
+  const stemM = new THREE.MeshStandardMaterial({ color:0x4a8830, roughness:0.55, emissive:0x1a4808, emissiveIntensity:0.1 });
+  g.add(Object.assign(new THREE.Mesh(new THREE.TubeGeometry(curve,14,0.03*scale,6,false), stemM), {castShadow:true}));
+
+  // Centro
+  const cM = new THREE.MeshStandardMaterial({ color:0xb85a10, roughness:0.32, metalness:0.1, emissive:0x7a3008, emissiveIntensity:0.32 });
+  const center = new THREE.Mesh(new THREE.SphereGeometry(0.26*scale,20,20), cM);
+  center.position.y=0.07*scale; center.castShadow=true; g.add(center);
+
+  // Semillas en el disco
+  const sM = new THREE.MeshStandardMaterial({ color:0x8a3a05, roughness:0.5 });
+  for(let s=0;s<20;s++) {
+    const sa=(s/20)*Math.PI*2, sd=(0.14+Math.random()*0.08)*scale;
+    const seed = new THREE.Mesh(new THREE.SphereGeometry(0.018*scale,4,4), sM);
+    seed.position.set(Math.cos(sa)*sd, 0.2*scale+Math.random()*0.04, Math.sin(sa)*sd);
+    g.add(seed);
+  }
+
+  // Estambres
+  const stM = new THREE.MeshStandardMaterial({ color:0xffaa33, emissive:0xff7700, emissiveIntensity:0.28 });
+  for(let s=0;s<36;s++) {
+    const sa=(s/36)*Math.PI*2, sd=(0.19+Math.random()*0.07)*scale;
+    const sta = new THREE.Mesh(new THREE.CylinderGeometry(0.013*scale,0.018*scale,0.08*scale,4), stM);
+    sta.position.set(Math.cos(sa)*sd, 0.15*scale+Math.random()*0.05, Math.sin(sa)*sd);
+    g.add(sta);
+  }
+
+  // Pétalos — 3 capas, forma ovalada suave (tipo rosa/girasol real, no picos)
+  const layers = [
+    { n:16, r:0.62, l:0.58, w:0.20, y:0.03, tx:0.22, c:0xffe044, em:0xd88000 },
+    { n:13, r:0.83, l:0.66, w:0.23, y:-0.02,tx:0.12, c:0xffd020, em:0xc07000 },
+    { n:10, r:0.50, l:0.40, w:0.16, y:0.12, tx:-0.05,c:0xffee88, em:0xe09000 },
+  ];
+  layers.forEach(cfg => {
+    const mat = new THREE.MeshStandardMaterial({ color:cfg.c, roughness:0.3, metalness:0.03, emissive:cfg.em, emissiveIntensity:0.05, side:THREE.DoubleSide });
+    for(let i=0;i<cfg.n;i++) {
+      // ángulo uniforme con variación mínima, evita el look "disperso/chueco"
+      const a=(i/cfg.n)*Math.PI*2+(Math.random()-.5)*0.05;
+
+      // pétalo ovalado: esfera achatada en vez de cono espinoso
+      const geo = new THREE.SphereGeometry(1, 12, 8, 0, Math.PI*2, 0, Math.PI*0.62);
+      const pp = geo.attributes.position;
+      for(let v=0;v<pp.count;v++) {
+        const py=pp.getY(v);
+        // curva la punta hacia arriba, como pétalo real
+        pp.setZ(v, pp.getZ(v)+Math.pow(Math.max(0,-py),2)*0.35);
+      }
+      geo.computeVertexNormals();
+
+      const petal = new THREE.Mesh(geo, mat);
+      petal.scale.set(cfg.w*scale, cfg.l*scale, cfg.w*scale*0.45);
+      petal.position.set(Math.cos(a)*cfg.r*scale, cfg.y*scale, Math.sin(a)*cfg.r*scale);
+      petal.rotation.y=a;
+      petal.rotation.z=Math.PI/2+cfg.tx;
+      petal.castShadow=true; g.add(petal);
+    }
+  });
+
+  g.position.set(x, yOff, z);
+  g.rotation.x = g.userData.rx;
+  g.rotation.z = g.userData.rz;
+  return g;
+}
+
+/* ── RAMO — coronas más separadas ── */
+function buildBouquet() {
+  const bouq = new THREE.Group();
+
+  // Flor heroína central
+  const hero = mkFlower(0,0,1.3,0.55,0);
+  bouq.add(hero); flowers.push(hero);
+
+  // Corona 1
+  for(let i=0;i<12;i++) {
+    const a=(i/12)*Math.PI*2, r=0.85+Math.random()*0.22;
+    const f=mkFlower(Math.cos(a)*r,Math.sin(a)*r,0.85+Math.random()*0.2,0.14+Math.random()*0.18,i*0.55);
+    bouq.add(f); flowers.push(f);
+  }
+  // Corona 2
+  for(let i=0;i<16;i++) {
+    const a=(i/16)*Math.PI*2+0.18, r=1.5+Math.random()*0.28;
+    const f=mkFlower(Math.cos(a)*r,Math.sin(a)*r,0.8+Math.random()*0.22,0.08+Math.random()*0.15,i*0.43+1.2);
+    bouq.add(f); flowers.push(f);
+  }
+  // Corona 3
+  for(let i=0;i<20;i++) {
+    const a=(i/20)*Math.PI*2+0.32, r=2.15+Math.random()*0.35;
+    const f=mkFlower(Math.cos(a)*r,Math.sin(a)*r,0.75+Math.random()*0.24,0.0+Math.random()*0.14,i*0.38+2.5);
+    bouq.add(f); flowers.push(f);
+  }
+  // Corona 4 — relleno exterior para look buchón
+  for(let i=0;i<24;i++) {
+    const a=(i/24)*Math.PI*2+0.5, r=2.75+Math.random()*0.4;
+    const f=mkFlower(Math.cos(a)*r,Math.sin(a)*r,0.65+Math.random()*0.22,-0.08+Math.random()*0.14,i*0.31+4.0);
+    bouq.add(f); flowers.push(f);
+  }
+  // Relleno interior extra — llena huecos entre coronas
+  for(let i=0;i<10;i++) {
+    const a=(i/10)*Math.PI*2+0.9, r=1.15+Math.random()*0.5;
+    const f=mkFlower(Math.cos(a)*r,Math.sin(a)*r,0.6+Math.random()*0.18,0.18+Math.random()*0.15,i*0.6+5.5);
+    bouq.add(f); flowers.push(f);
+  }
+
+  scene.add(bouq);
+
+  // Follaje
+  const lM = new THREE.MeshStandardMaterial({ color:0x468038, roughness:0.65, emissive:0x1a4010, emissiveIntensity:0.06, side:THREE.DoubleSide });
+  for(let f=0;f<70;f++) {
+    const a=Math.random()*Math.PI*2, r=1.5+Math.random()*1.4;
+    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.085,0.55+Math.random()*0.25,5), lM);
+    leaf.position.set(Math.cos(a)*r,-0.85+Math.random()*1.2,Math.sin(a)*r);
+    leaf.rotation.set(0,Math.random()*Math.PI,a+(Math.random()-.5)*0.4);
+    leaf.castShadow=true; scene.add(leaf);
+  }
+
+  buildRibbon();
+}
+
+function buildRibbon() {
+  const rM = new THREE.MeshStandardMaterial({ color:0xd4a820, roughness:0.28, metalness:0.5, emissive:0x6a4400, emissiveIntensity:0.16 });
+  const band = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.055, 7, 64), rM);
+  band.rotation.x=Math.PI/2; band.position.y=-0.95; scene.add(band);
+
+  [-1,1].forEach(s => {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.34,0.05,7,28), rM);
+    loop.position.set(s*0.55,-0.78,0.1); loop.rotation.set(0.3,s*0.35,0.2); scene.add(loop);
+    const c = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(s*0.12,-0.74,0.1), new THREE.Vector3(s*0.42,-1.0,0.18),
+      new THREE.Vector3(s*0.52,-1.3,0.08), new THREE.Vector3(s*0.42,-1.5,0.04)
+    ]);
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(c,12,0.036,6), rM));
+  });
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.13,12,12), rM);
+  knot.position.set(0,-0.76,0.1); scene.add(knot);
+}
+
+/* ── MODO NOCHE ── */
+function toggleNight() {
+  nightMode = !nightMode;
+  const bg = nightMode ? 0x01000a : 0x060401;
+  scene.background = new THREE.Color(bg);
+  scene.fog = new THREE.FogExp2(bg, nightMode?0.024:0.02);
+  sunLight.color.set(nightMode ? 0x7788cc : 0xfff0cc);
+  sunLight.intensity  = nightMode ? 0.55 : 2.2;
+  fillLight.color.set(nightMode ? 0x3344bb : 0xff9933);
+  fillLight.intensity = nightMode ? 0.45 : 1.1;
+  auraLight.color.set(nightMode ? 0x5577ff : 0xffaa33);
+  renderer.toneMappingExposure = nightMode ? 0.9 : 1.15;
+  bloomPass.strength  = nightMode ? 0.75 : 0.45;
+  return nightMode;
+}
+
+/* ── BRILLO INTENSO ── */
+function toggleBrillo() {
+  brilloMode = !brilloMode;
+  bloomPass.strength   = brilloMode ? 1.6  : (nightMode ? 0.75 : 0.45);
+  bloomPass.radius     = brilloMode ? 0.7  : 0.4;
+  bloomPass.threshold  = brilloMode ? 0.15 : 0.4;
+  renderer.toneMappingExposure = brilloMode ? 1.8 : (nightMode ? 0.9 : 1.15);
+  auraLight.intensity  = brilloMode ? 2.5  : 1.0;
+  auraLight.distance   = brilloMode ? 14   : 8;
+  sunLight.intensity   = brilloMode ? 3.2  : (nightMode ? 0.55 : 2.2);
+  return brilloMode;
+}
+
+function onSceneClick(e) {
+  if(['icon-btn','start-btn'].some(c=>e.target.classList.contains(c))) return;
+
+  clickCount++;
+  burst(e.clientX, e.clientY);
+
+  flashLight.intensity = 3.0;
+  bloomPass.strength = nightMode ? 1.1 : 0.85;
+  setTimeout(() => { flashLight.intensity=0; bloomPass.strength=nightMode?0.75:0.45; }, 170);
+
+  flowers.forEach(f => { f.userData.shake=1.0; });
+
+  for(let i=0;i<3;i++) setTimeout(spawnPetal, i*90);
+
+  const lc = document.getElementById('love-count');
+  lc.textContent='♡ '+clickCount;
+  lc.classList.add('bump');
+  setTimeout(() => lc.classList.remove('bump'), 400);
+
+  if(clickCount===1 || clickCount%4===0) {
+    document.getElementById('msgText').innerHTML = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+    const m = document.getElementById('msg');
+    m.classList.add('show');
+    setTimeout(() => m.classList.remove('show'), 3800);
+  }
+}
+
+/* ── ANIMACIÓN ── */
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.011;
+
+  flowers.forEach(f => {
+    const ph=f.userData.phase;
+    const wind=Math.sin(t*1.05+ph*0.8)*0.03+Math.sin(t*0.6+ph)*0.01;
+    const sway=Math.cos(t*0.75+ph*0.6)*0.016;
+    f.rotation.z = f.userData.rz + wind;
+    f.rotation.x = f.userData.rx + sway;
+    if(f.userData.shake>0) {
+      f.rotation.z += Math.sin(t*26+ph)*f.userData.shake*0.065;
+      f.userData.shake = Math.max(0, f.userData.shake-0.045);
+    }
+    f.position.y = f.userData.yOff + Math.sin(t*1.3+ph)*0.016;
+  });
+
+  updateParticles();
+
+  auraLight.intensity = 0.8+Math.sin(t*3.8)*0.28;
+  auraLight.position.x = Math.sin(t*0.38)*1.0;
+  auraLight.position.z = Math.cos(t*0.3)*0.85;
+  fillLight.position.x = Math.cos(t*0.22)*2.2;
+  fillLight.position.z = Math.sin(t*0.18)*1.8;
+
+  if(flashLight.intensity>0) flashLight.intensity*=0.86;
+
+  controls.update();
+  composer.render();
+}
+
+function onResize() {
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  composer.setSize(innerWidth,innerHeight);
+}
+
+/* ══ BOTONES ══ */
+document.getElementById('nightBtn').addEventListener('click', () => {
+  const isNight = toggleNight();
+  document.getElementById('nightIcon').textContent  = isNight ? '☀' : '☽';
+  document.getElementById('nightLabel').textContent = isNight ? 'Modo día' : 'Modo noche';
+  document.getElementById('nightBtn').classList.toggle('active', isNight);
+  const r = document.getElementById('nightBtn').getBoundingClientRect();
+  burst(r.left+r.width/2, r.top+r.height/2, 8);
+});
+
+document.getElementById('petalBtn').addEventListener('click', () => {
+  const on = togglePetals();
+  document.getElementById('petalBtn').classList.toggle('active', on);
+});
+
+document.getElementById('brilloBtn').addEventListener('click', () => {
+  const on = toggleBrillo();
+  document.getElementById('brilloBtn').classList.toggle('active', on);
+  document.getElementById('brilloIcon').textContent = on ? '✧' : '✦';
+  const r = document.getElementById('brilloBtn').getBoundingClientRect();
+  burst(r.left+r.width/2, r.top+r.height/2, on ? 18 : 8);
+});
+
+document.getElementById('musicBtn').addEventListener('click', () => {
+  toggleMusic();
+  document.getElementById('musicBtn').classList.toggle('active', musicOn);
+  document.getElementById('musicIcon').textContent = musicOn ? '■' : '♪';
+});
+
+</script>
+</body>
+</html>
